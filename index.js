@@ -113,9 +113,15 @@ function fetchImg(url, cb) {
     .then(res => res.json())
     .then(data => {
       let img = data.sprites.other['official-artwork'].front_default;
-      cb(img);
-    });
+      if (img) {
+        cb(img);
+      } else {
+        cb(null); 
+      }
+    })
+    .catch(() => cb(null));
 }
+
 
 // start a game
 function newGame() {
@@ -136,26 +142,34 @@ function newGame() {
   game.timeLeft = time;
   showStats();
 
-  let picks = pokeList.slice();
-  shuffle(picks);
-  picks = picks.slice(0, game.total);
+  let shuffled = pokeList.slice();
+  shuffle(shuffled);
 
   let ready = [];
-  let loaded = 0;
+  let index = 0;
 
-  picks.forEach((poke, i) => {
-    fetchImg(poke.url, img => {
-      ready.push({ img: img, id: i });
-      loaded++;
+  function checkDone() {
+    if (ready.length === game.total) {
+      buildGrid(ready, mode);
+      setupClicks();
+    }
+  }
 
-      if (loaded === game.total) {
-         buildGrid(ready, mode);
-         setupClicks(); 
-}
-
+  while (index < shuffled.length && ready.length < game.total) {
+    let poke = shuffled[index];
+    fetchImg(poke.url, function(img) {
+      if (img) {
+        ready.push({ img: img, id: ready.length });
+        checkDone();
+      } else {
+        checkDone();
+      }
     });
-  });
+    index++;
+  }
 }
+
+
 
 // build card display
 function buildGrid(data, mode) {
